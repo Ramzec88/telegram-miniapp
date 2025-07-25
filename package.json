@@ -2,14 +2,26 @@
   "name": "telegram-miniapp-vercel",
   "version": "1.0.0",
   "description": "Telegram Mini App с Vercel + Supabase",
-  "main": "index.html",
+  "main": "public/index.html",
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'No build needed'",
+    "build": "echo 'No build needed for static site'",
     "deploy": "vercel --prod"
   },
+  "keywords": [
+    "telegram",
+    "miniapp",
+    "vercel",
+    "supabase",
+    "serverless"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
