@@ -416,18 +416,6 @@
             opacity: 0.7;
         }
 
-        /* Темная тема поддержка */
-        @media (prefers-color-scheme: dark) {
-            .item {
-                background: var(--tg-theme-secondary-bg-color, #2d3748);
-            }
-            
-            .tabs {
-                background: var(--tg-theme-secondary-bg-color, #2d3748);
-            }
-        }
-
-        /* Мобильная адаптация */
         @media (max-width: 480px) {
             body {
                 padding: 12px;
@@ -464,7 +452,6 @@
             }
         }
 
-        /* Анимации для добавления элементов */
         .item-enter {
             animation: slideInUp 0.5s ease;
         }
@@ -477,32 +464,6 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
-            }
-        }
-
-        /* Успешные действия */
-        .success-message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: linear-gradient(135deg, #38a169, #2f855a);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-weight: 600;
-            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
-            z-index: 1000;
-            animation: slideInRight 0.3s ease;
-        }
-
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(100%);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
             }
         }
     </style>
@@ -518,15 +479,15 @@
     </div>
 
     <div class="stats">
-        <div class="stat-card" id="taskCard">
+        <div class="stat-card">
             <div class="stat-number" id="taskCount">0</div>
             <div class="stat-label">Задач</div>
         </div>
-        <div class="stat-card" id="noteCard">
+        <div class="stat-card">
             <div class="stat-number" id="noteCount">0</div>
             <div class="stat-label">Заметок</div>
         </div>
-        <div class="stat-card" id="completedCard">
+        <div class="stat-card">
             <div class="stat-number" id="completedCount">0</div>
             <div class="stat-label">Выполнено</div>
         </div>
@@ -576,10 +537,6 @@
             tg.ready();
             tg.expand();
             tg.MainButton.hide();
-            // Применяем тему Telegram
-            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
-            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
-            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#4a90e2');
         }
 
         // Состояние приложения
@@ -602,17 +559,6 @@
         function setLoading(loading) {
             isLoading = loading;
             document.body.classList.toggle('loading', loading);
-        }
-
-        function showSuccessMessage(message) {
-            const successDiv = document.createElement('div');
-            successDiv.className = 'success-message';
-            successDiv.textContent = message;
-            document.body.appendChild(successDiv);
-            
-            setTimeout(() => {
-                successDiv.remove();
-            }, 3000);
         }
 
         // API взаимодействие
@@ -710,7 +656,6 @@
 
         // Управление вкладками
         function switchTab(tabName) {
-            // Анимация смены вкладок
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
@@ -719,40 +664,15 @@
             
             currentTab = tabName;
             
-            // Небольшая вибрация при переключении
             if (tg) tg.HapticFeedback.impactOccurred('light');
         }
 
         // Обновление статистики
         function updateStats() {
             const completedTasks = tasks.filter(task => task.completed).length;
-            
-            // Анимированное обновление чисел
-            animateNumber('taskCount', tasks.length);
-            animateNumber('noteCount', notes.length);
-            animateNumber('completedCount', completedTasks);
-        }
-
-        function animateNumber(elementId, targetValue) {
-            const element = document.getElementById(elementId);
-            const startValue = parseInt(element.textContent) || 0;
-            const duration = 500;
-            const startTime = performance.now();
-            
-            function updateNumber(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easedProgress = 1 - Math.pow(1 - progress, 3); // easeOut
-                const currentValue = Math.round(startValue + (targetValue - startValue) * easedProgress);
-                
-                element.textContent = currentValue;
-                
-                if (progress < 1) {
-                    requestAnimationFrame(updateNumber);
-                }
-            }
-            
-            requestAnimationFrame(updateNumber);
+            document.getElementById('taskCount').textContent = tasks.length;
+            document.getElementById('noteCount').textContent = notes.length;
+            document.getElementById('completedCount').textContent = completedTasks;
         }
 
         // Работа с задачами
@@ -778,7 +698,6 @@
             renderTasks();
             updateStats();
             
-            showSuccessMessage('Задача добавлена!');
             if (tg) tg.HapticFeedback.impactOccurred('medium');
             
             await saveData();
@@ -805,7 +724,6 @@
             renderNotes();
             updateStats();
             
-            showSuccessMessage('Заметка сохранена!');
             if (tg) tg.HapticFeedback.impactOccurred('medium');
             
             await saveData();
@@ -881,7 +799,6 @@
                 renderTasks();
                 updateStats();
                 
-                showSuccessMessage(task.completed ? 'Задача выполнена!' : 'Задача восстановлена');
                 if (tg) tg.HapticFeedback.impactOccurred('heavy');
                 
                 await saveData();
@@ -889,10 +806,66 @@
         }
 
         async function deleteTask(id) {
-            const task = tasks.find(t => t.id === id);
-            if (task && confirm('Удалить эту задачу?')) {
-                tasks = tasks.filter(t => t.id !== id);
-                renderTasks();
-                updateStats();
-                
-                showSuccessMessage('Задача удалена
+            tasks = tasks.filter(t => t.id !== id);
+            renderTasks();
+            updateStats();
+            
+            if (tg) tg.HapticFeedback.impactOccurred('heavy');
+            
+            await saveData();
+        }
+
+        async function deleteNote(id) {
+            notes = notes.filter(n => n.id !== id);
+            renderNotes();
+            updateStats();
+            
+            if (tg) tg.HapticFeedback.impactOccurred('heavy');
+            
+            await saveData();
+        }
+
+        // Форматирование даты
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return 'только что';
+            if (minutes < 60) return `${minutes} мин назад`;
+            if (hours < 24) return `${hours} ч назад`;
+            if (days < 7) return `${days} д назад`;
+            
+            return date.toLocaleDateString('ru-RU');
+        }
+
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Обработка нажатия Enter
+        document.getElementById('taskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addTask();
+        });
+
+        document.getElementById('noteInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addNote();
+        });
+
+        // Инициализация приложения
+        async function initApp() {
+            console.log('Инициализация Артемия...');
+            await loadData();
+        }
+
+        // Запускаем инициализацию
+        setTimeout(initApp, 500);
+    </script>
+</body>
+</html>
