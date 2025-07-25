@@ -36,9 +36,16 @@
             margin-bottom: 8px;
         }
 
-        .app-header p {
-            opacity: 0.9;
-            font-size: 14px;
+        .debug-info {
+            background: #f0f0f0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
         }
 
         .connection-status {
@@ -70,7 +77,7 @@
 
         .tabs {
             display: flex;
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            background: #f0f0f0;
             border-radius: 12px;
             padding: 4px;
             margin-bottom: 24px;
@@ -87,8 +94,8 @@
         }
 
         .tab.active {
-            background: var(--tg-theme-button-color, #007AFF);
-            color: var(--tg-theme-button-text-color, #ffffff);
+            background: #007AFF;
+            color: #ffffff;
             box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
         }
 
@@ -109,72 +116,41 @@
         .input-field {
             flex: 1;
             padding: 12px 16px;
-            border: 2px solid var(--tg-theme-secondary-bg-color, #e0e0e0);
+            border: 2px solid #e0e0e0;
             border-radius: 12px;
-            background: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
+            background: #ffffff;
+            color: #000000;
             font-size: 16px;
-            transition: border-color 0.3s ease;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: var(--tg-theme-button-color, #007AFF);
         }
 
         .btn {
             padding: 12px 20px;
-            background: var(--tg-theme-button-color, #007AFF);
-            color: var(--tg-theme-button-text-color, #ffffff);
+            background: #007AFF;
+            color: #ffffff;
             border: none;
             border-radius: 12px;
             cursor: pointer;
             font-weight: 600;
             font-size: 16px;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
         }
 
         .btn-small {
             padding: 6px 12px;
             font-size: 12px;
-            font-weight: 500;
         }
 
         .btn-danger {
             background: #FF3B30;
-            box-shadow: 0 2px 8px rgba(255, 59, 48, 0.3);
-        }
-
-        .btn-danger:hover {
-            box-shadow: 0 4px 16px rgba(255, 59, 48, 0.4);
         }
 
         .item {
-            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            background: #f8f9fa;
             padding: 16px;
             border-radius: 12px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-color: var(--tg-theme-button-color, #007AFF);
         }
 
         .item.completed {
@@ -189,12 +165,6 @@
         .item-title {
             font-weight: 600;
             margin-bottom: 4px;
-            color: var(--tg-theme-text-color, #000000);
-        }
-
-        .item-date {
-            font-size: 12px;
-            color: var(--tg-theme-hint-color, #999999);
         }
 
         .item-actions {
@@ -205,13 +175,7 @@
         .empty-state {
             text-align: center;
             padding: 40px 20px;
-            color: var(--tg-theme-hint-color, #999999);
-        }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
+            color: #999999;
         }
 
         .stats {
@@ -227,7 +191,6 @@
             padding: 16px;
             border-radius: 12px;
             text-align: center;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
         }
 
         .stat-number {
@@ -240,35 +203,20 @@
             font-size: 12px;
             opacity: 0.9;
         }
-
-        .loading {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 12px;
-            }
-            
-            .app-header h1 {
-                font-size: 20px;
-            }
-            
-            .input-field, .btn {
-                font-size: 14px;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="app-header">
-        <h1>🤖 Персональный помощник v2</h1>
-        <p>Управляйте задачами и заметками легко и удобно</p>
+        <h1>🤖 Персональный помощник (ДИАГНОСТИКА)</h1>
+        <p>Отладочная версия для поиска проблем</p>
+    </div>
+
+    <div class="debug-info" id="debugInfo">
+        Загрузка диагностической информации...
     </div>
 
     <div class="connection-status loading" id="connectionStatus">
-        🔄 Подключение к серверу...
+        🔄 Проверка подключения...
     </div>
 
     <div class="stats">
@@ -298,7 +246,6 @@
         </div>
         <div id="taskList">
             <div class="empty-state">
-                <div class="empty-icon">📋</div>
                 <p>Задач пока нет. Добавьте первую!</p>
             </div>
         </div>
@@ -311,7 +258,6 @@
         </div>
         <div id="noteList">
             <div class="empty-state">
-                <div class="empty-icon">📝</div>
                 <p>Заметок пока нет. Создайте первую!</p>
             </div>
         </div>
@@ -330,8 +276,14 @@
         let tasks = [];
         let notes = [];
         let currentTab = 'tasks';
-        let isOnline = false;
-        let isLoading = false;
+        let debugLog = [];
+
+        function addDebugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.push(`[${timestamp}] ${message}`);
+            document.getElementById('debugInfo').innerHTML = debugLog.slice(-20).join('<br>');
+            console.log(`[DEBUG] ${message}`);
+        }
 
         // Генерация уникальных ID
         function generateId() {
@@ -343,77 +295,91 @@
             const statusEl = document.getElementById('connectionStatus');
             statusEl.className = `connection-status ${status}`;
             statusEl.innerHTML = message;
-        }
-
-        // Показать состояние загрузки
-        function setLoading(loading) {
-            isLoading = loading;
-            document.body.classList.toggle('loading', loading);
+            addDebugLog(`Статус: ${message}`);
         }
 
         // Сохранение данных на сервере
         async function saveData() {
-            if (!tg?.initData || isLoading) {
-                console.log('Пропускаем сохранение: нет initData или идет загрузка');
+            addDebugLog('🔄 Начинаем сохранение данных...');
+            
+            // Проверяем наличие Telegram WebApp
+            if (!tg) {
+                addDebugLog('❌ Telegram WebApp не обнаружен');
+                updateConnectionStatus('offline', '❌ Нет Telegram WebApp');
                 return;
             }
-            
-            setLoading(true);
+
+            if (!tg.initData) {
+                addDebugLog('❌ initData отсутствует в Telegram WebApp');
+                updateConnectionStatus('offline', '❌ Нет initData от Telegram');
+                return;
+            }
+
+            addDebugLog(`✅ initData получен, длина: ${tg.initData.length}`);
+            addDebugLog(`📊 Данные для сохранения: ${tasks.length} задач, ${notes.length} заметок`);
+
             try {
-                console.log('Отправляем данные на сервер...');
+                const payload = {
+                    initData: tg.initData,
+                    tasks: tasks,
+                    notes: notes
+                };
+
+                addDebugLog('🚀 Отправляем POST запрос к /api/save');
+                
                 const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        initData: tg.initData,
-                        tasks: tasks,
-                        notes: notes
-                    })
+                    body: JSON.stringify(payload)
                 });
+                
+                addDebugLog(`📡 Ответ сервера: HTTP ${response.status}`);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
+                    addDebugLog(`❌ Ошибка HTTP: ${errorText}`);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const result = await response.json();
-                isOnline = true;
-                updateConnectionStatus('online', '✅ Данные сохранены в облаке');
-                console.log('✅ Данные сохранены:', result);
+                addDebugLog(`✅ Успешный ответ: ${JSON.stringify(result)}`);
+                updateConnectionStatus('online', '✅ Данные сохранены!');
+                
             } catch (error) {
-                console.error('❌ Ошибка сохранения:', error);
-                isOnline = false;
-                updateConnectionStatus('offline', '❌ Ошибка сохранения: ' + error.message);
-                if (tg) tg.showAlert('Ошибка сохранения: ' + error.message);
-            } finally {
-                setLoading(false);
+                addDebugLog(`💥 Ошибка сохранения: ${error.message}`);
+                updateConnectionStatus('offline', '❌ Ошибка сохранения');
             }
         }
 
         // Загрузка данных с сервера
         async function loadData() {
-            if (isLoading) return;
-            
-            setLoading(true);
-            updateConnectionStatus('loading', '🔄 Загрузка данных...');
+            addDebugLog('🔄 Начинаем загрузку данных...');
             
             try {
-                console.log('Загружаем данные с сервера...');
-                
                 let url = '/api/load';
+                
                 if (tg?.initData) {
+                    addDebugLog(`✅ Используем initData от Telegram (длина: ${tg.initData.length})`);
                     url += `?initData=${encodeURIComponent(tg.initData)}`;
                 } else {
+                    addDebugLog('⚠️ initData отсутствует, используем тестовый режим');
                     url += '?test=1';
                 }
                 
+                addDebugLog(`🚀 Отправляем GET запрос: ${url.substring(0, 50)}...`);
+                
                 const response = await fetch(url);
+                addDebugLog(`📡 Ответ сервера: HTTP ${response.status}`);
+                
                 if (!response.ok) {
                     const errorText = await response.text();
+                    addDebugLog(`❌ Ошибка HTTP: ${errorText}`);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const data = await response.json();
+                addDebugLog(`✅ Данные получены: ${data.tasks?.length || 0} задач, ${data.notes?.length || 0} заметок`);
+                
                 tasks = data.tasks || [];
                 notes = data.notes || [];
                 
@@ -421,39 +387,21 @@
                 renderNotes();
                 updateStats();
                 
-                isOnline = true;
-                if (tg?.initData) {
-                    updateConnectionStatus('online', '✅ Подключено к облаку');
-                } else {
-                    updateConnectionStatus('offline', '⚠️ Тестовый режим (демо данные)');
-                }
-                console.log('✅ Данные загружены:', data);
-            } catch (error) {
-                console.error('❌ Ошибка загрузки:', error);
-                isOnline = false;
-                updateConnectionStatus('offline', '❌ Ошибка загрузки: ' + error.message);
+                updateConnectionStatus('online', '✅ Данные загружены');
                 
-                // Показываем локальные примеры при ошибке
-                tasks = [
-                    {
-                        id: generateId(),
-                        text: 'Исправить подключение к серверу',
-                        completed: false,
-                        createdAt: new Date(Date.now() - 3600000).toISOString()
-                    }
-                ];
-                notes = [
-                    {
-                        id: generateId(),
-                        text: 'Проверить настройки API',
-                        createdAt: new Date(Date.now() - 1800000).toISOString()
-                    }
-                ];
+            } catch (error) {
+                addDebugLog(`💥 Ошибка загрузки: ${error.message}`);
+                updateConnectionStatus('offline', '❌ Ошибка загрузки');
+                
+                // Показываем тестовые данные при ошибке
+                tasks = [{
+                    id: generateId(),
+                    text: 'Тестовая задача (ошибка загрузки)',
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                }];
                 renderTasks();
-                renderNotes();
                 updateStats();
-            } finally {
-                setLoading(false);
             }
         }
 
@@ -466,6 +414,7 @@
             document.getElementById(tabName).classList.add('active');
             
             currentTab = tabName;
+            addDebugLog(`Переключились на вкладку: ${tabName}`);
         }
 
         // Обновление статистики
@@ -482,6 +431,7 @@
             const text = input.value.trim();
             
             if (!text) {
+                addDebugLog('❌ Попытка добавить пустую задачу');
                 if (tg) tg.showAlert('Введите текст задачи!');
                 return;
             }
@@ -498,6 +448,8 @@
             renderTasks();
             updateStats();
             
+            addDebugLog(`➕ Добавлена задача: "${text}"`);
+            
             if (tg) tg.HapticFeedback.impactOccurred('light');
             
             // Сохраняем на сервере
@@ -510,6 +462,7 @@
             const text = input.value.trim();
             
             if (!text) {
+                addDebugLog('❌ Попытка добавить пустую заметку');
                 if (tg) tg.showAlert('Введите текст заметки!');
                 return;
             }
@@ -525,6 +478,8 @@
             renderNotes();
             updateStats();
             
+            addDebugLog(`📝 Добавлена заметка: "${text}"`);
+            
             if (tg) tg.HapticFeedback.impactOccurred('light');
             
             // Сохраняем на сервере
@@ -536,12 +491,7 @@
             const container = document.getElementById('taskList');
             
             if (tasks.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📋</div>
-                        <p>Задач пока нет. Добавьте первую!</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="empty-state"><p>Задач пока нет. Добавьте первую!</p></div>`;
                 return;
             }
 
@@ -549,7 +499,6 @@
                 <div class="item ${task.completed ? 'completed' : ''}">
                     <div class="item-content">
                         <div class="item-title">${escapeHtml(task.text)}</div>
-                        <div class="item-date">${formatDate(task.createdAt)}</div>
                     </div>
                     <div class="item-actions">
                         <button class="btn btn-small" onclick="toggleTask('${task.id}')">
@@ -566,12 +515,7 @@
             const container = document.getElementById('noteList');
             
             if (notes.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">📝</div>
-                        <p>Заметок пока нет. Создайте первую!</p>
-                    </div>
-                `;
+                container.innerHTML = `<div class="empty-state"><p>Заметок пока нет. Создайте первую!</p></div>`;
                 return;
             }
 
@@ -579,7 +523,6 @@
                 <div class="item">
                     <div class="item-content">
                         <div class="item-title">${escapeHtml(note.text)}</div>
-                        <div class="item-date">${formatDate(note.createdAt)}</div>
                     </div>
                     <div class="item-actions">
                         <button class="btn btn-small btn-danger" onclick="deleteNote('${note.id}')">🗑️</button>
@@ -595,6 +538,7 @@
                 task.completed = !task.completed;
                 renderTasks();
                 updateStats();
+                addDebugLog(`✏️ Изменен статус задачи: ${task.text}`);
                 if (tg) tg.HapticFeedback.impactOccurred('medium');
                 await saveData();
             }
@@ -602,37 +546,24 @@
 
         // Удаление задачи
         async function deleteTask(id) {
+            const task = tasks.find(t => t.id === id);
             tasks = tasks.filter(t => t.id !== id);
             renderTasks();
             updateStats();
+            addDebugLog(`🗑️ Удалена задача: ${task?.text}`);
             if (tg) tg.HapticFeedback.impactOccurred('heavy');
             await saveData();
         }
 
         // Удаление заметки
         async function deleteNote(id) {
+            const note = notes.find(n => n.id === id);
             notes = notes.filter(n => n.id !== id);
             renderNotes();
             updateStats();
+            addDebugLog(`🗑️ Удалена заметка: ${note?.text}`);
             if (tg) tg.HapticFeedback.impactOccurred('heavy');
             await saveData();
-        }
-
-        // Форматирование даты
-        function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            const now = new Date();
-            const diff = now - date;
-            const minutes = Math.floor(diff / 60000);
-            const hours = Math.floor(diff / 3600000);
-            const days = Math.floor(diff / 86400000);
-
-            if (minutes < 1) return 'только что';
-            if (minutes < 60) return `${minutes} мин назад`;
-            if (hours < 24) return `${hours} ч назад`;
-            if (days < 7) return `${days} д назад`;
-            
-            return date.toLocaleDateString('ru-RU');
         }
 
         // Экранирование HTML
@@ -653,19 +584,29 @@
 
         // Инициализация приложения
         async function initApp() {
-            console.log('=== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===');
-            console.log('URL:', window.location.href);
-            console.log('Telegram WebApp доступен:', !!tg);
+            addDebugLog('🚀 СТАРТ ПРИЛОЖЕНИЯ');
+            addDebugLog(`📱 URL: ${window.location.href}`);
+            addDebugLog(`🌐 User Agent: ${navigator.userAgent.substring(0, 50)}...`);
+            addDebugLog(`📦 Telegram доступен: ${!!window.Telegram}`);
             
-            if (tg?.initData) {
-                console.log('✅ Telegram WebApp обнаружен');
-                console.log('initData длина:', tg.initData.length);
+            if (window.Telegram?.WebApp) {
+                addDebugLog(`✅ Telegram WebApp обнаружен`);
+                addDebugLog(`📊 Platform: ${tg.platform || 'unknown'}`);
+                addDebugLog(`📱 Version: ${tg.version || 'unknown'}`);
+                addDebugLog(`🔑 initData длина: ${tg.initData?.length || 0}`);
+                
+                if (tg.initDataUnsafe?.user) {
+                    const user = tg.initDataUnsafe.user;
+                    addDebugLog(`👤 Пользователь: ${user.first_name} (ID: ${user.id})`);
+                }
             } else {
-                console.log('⚠️ Telegram WebApp НЕ обнаружен - тестовый режим');
+                addDebugLog(`⚠️ Telegram WebApp НЕ обнаружен - тестовый режим`);
             }
             
-            // Загружаем данные с сервера
+            // Загружаем данные
             await loadData();
+            
+            addDebugLog('✅ Инициализация завершена');
         }
 
         // Запускаем инициализацию
