@@ -41,6 +41,27 @@
             font-size: 14px;
         }
 
+        .connection-status {
+            text-align: center;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .connection-status.online {
+            background: #d4f6dd;
+            color: #1b8332;
+            border: 1px solid #86e29b;
+        }
+
+        .connection-status.offline {
+            background: #ffd6d6;
+            color: #d32f2f;
+            border: 1px solid #ffb3b3;
+        }
+
         .tabs {
             display: flex;
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
@@ -214,6 +235,11 @@
             opacity: 0.9;
         }
 
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
         @media (max-width: 480px) {
             body {
                 padding: 12px;
@@ -233,6 +259,10 @@
     <div class="app-header">
         <h1>🤖 Персональный помощник</h1>
         <p>Управляйте задачами и заметками легко и удобно</p>
+    </div>
+
+    <div class="connection-status" id="connectionStatus">
+        🔄 Подключение к серверу...
     </div>
 
     <div class="stats">
@@ -290,16 +320,36 @@
             tg.MainButton.hide();
         }
 
-        // Хранение данных в памяти
+        // Хранение данных
         let tasks = [];
         let notes = [];
         let currentTab = 'tasks';
-        let isOnline = true;
+        let isOnline = false;
+        let isLoading = false;
+
+        // Генерация уникальных ID
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        // Обновление статуса подключения
+        function updateConnectionStatus(status, message) {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = `connection-status ${status}`;
+            statusEl.innerHTML = message;
+        }
+
+        // Показать состояние загрузки
+        function setLoading(loading) {
+            isLoading = loading;
+            document.body.classList.toggle('loading', loading);
+        }
 
         // Сохранение данных на сервере
         async function saveData() {
-            if (!isOnline || !tg?.initData) return;
+            if (!tg?.initData || isLoading) return;
             
+            setLoading(true);
             try {
                 const response = await fetch('/api/save', {
                     method: 'POST',
@@ -311,21 +361,38 @@
                     })
                 });
                 
-                if (!response.ok) throw new Error('Ошибка сохранения');
-                console.log('Данные сохранены на сервере');
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(`Ошибка ${response.status}: ${error}`);
+                }
+                
+                const result = await response.json();
+                isOnline = true;
+                updateConnectionStatus('online', '✅ Данные сохранены в облаке');
+                console.log('Данные сохранены:', result);
             } catch (error) {
-                console.error('Ошибка сохранения данных:', error);
-                if (tg) tg.showAlert('Ошибка сохранения данных');
+                console.error('Ошибка сохранения:', error);
+                isOnline = false;
+                updateConnectionStatus('offline', '❌ Ошибка сохранения данных');
+                if (tg) tg.showAlert('Ошибка сохранения: ' + error.message);
+            } finally {
+                setLoading(false);
             }
         }
 
         // Загрузка данных с сервера
         async function loadData() {
-            if (!isOnline || !tg?.initData) return;
+            if (!tg?.initData || isLoading) return;
+            
+            setLoading(true);
+            updateConnectionStatus('offline', '🔄 Загрузка данных...');
             
             try {
                 const response = await fetch(`/api/load?initData=${encodeURIComponent(tg.initData)}`);
-                if (!response.ok) throw new Error('Ошибка загрузки');
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(`Ошибка ${response.status}: ${error}`);
+                }
                 
                 const data = await response.json();
                 tasks = data.tasks || [];
@@ -335,14 +402,17 @@
                 renderNotes();
                 updateStats();
                 
-                console.log('Данные загружены с сервера');
+                isOnline = true;
+                updateConnectionStatus('online', '✅ Подключено к облаку');
+                console.log('Данные загружены:', data);
             } catch (error) {
-                console.error('Ошибка загрузки данных:', error);
+                console.error('Ошибка загрузки:', error);
+                isOnline = false;
+                updateConnectionStatus('offline', '❌ Работа в автономном режиме');
                 // Продолжаем работу с локальными данными
+            } finally {
+                setLoading(false);
             }
-        }
-        function generateId() {
-            return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
         // Переключение вкладок
@@ -365,7 +435,7 @@
         }
 
         // Добавление задачи
-        function addTask() {
+        async function addTask() {
             const input = document.getElementById('taskInput');
             const text = input.value.trim();
             
@@ -378,20 +448,22 @@
                 id: generateId(),
                 text: text,
                 completed: false,
-                createdAt: new Date()
+                createdAt: new Date().toISOString()
             };
 
             tasks.unshift(task);
             input.value = '';
             renderTasks();
             updateStats();
-            saveData(); // Сохраняем на сервере
-
+            
             if (tg) tg.HapticFeedback.impactOccurred('light');
+            
+            // Сохраняем на сервере
+            await saveData();
         }
 
         // Добавление заметки
-        function addNote() {
+        async function addNote() {
             const input = document.getElementById('noteInput');
             const text = input.value.trim();
             
@@ -403,16 +475,18 @@
             const note = {
                 id: generateId(),
                 text: text,
-                createdAt: new Date()
+                createdAt: new Date().toISOString()
             };
 
             notes.unshift(note);
             input.value = '';
             renderNotes();
             updateStats();
-            saveData(); // Сохраняем на сервере
-
+            
             if (tg) tg.HapticFeedback.impactOccurred('light');
+            
+            // Сохраняем на сервере
+            await saveData();
         }
 
         // Отображение задач
@@ -473,37 +547,38 @@
         }
 
         // Переключение статуса задачи
-        function toggleTask(id) {
+        async function toggleTask(id) {
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task.completed = !task.completed;
                 renderTasks();
                 updateStats();
-                saveData(); // Сохраняем изменения
                 if (tg) tg.HapticFeedback.impactOccurred('medium');
+                await saveData();
             }
         }
 
         // Удаление задачи
-        function deleteTask(id) {
+        async function deleteTask(id) {
             tasks = tasks.filter(t => t.id !== id);
             renderTasks();
             updateStats();
-            saveData(); // Сохраняем изменения
             if (tg) tg.HapticFeedback.impactOccurred('heavy');
+            await saveData();
         }
 
         // Удаление заметки
-        function deleteNote(id) {
+        async function deleteNote(id) {
             notes = notes.filter(n => n.id !== id);
             renderNotes();
             updateStats();
-            saveData(); // Сохраняем изменения
             if (tg) tg.HapticFeedback.impactOccurred('heavy');
+            await saveData();
         }
 
         // Форматирование даты
-        function formatDate(date) {
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
             const now = new Date();
             const diff = now - date;
             const minutes = Math.floor(diff / 60000);
@@ -536,38 +611,43 @@
 
         // Инициализация приложения
         async function initApp() {
-            // Загружаем данные с сервера при запуске
-            await loadData();
+            console.log('Инициализация приложения...');
             
-            // Добавляем примеры только если данных нет
-            if (tasks.length === 0 && notes.length === 0) {
-                tasks.push(
+            // Проверяем доступность Telegram Web App
+            if (tg?.initData) {
+                console.log('Telegram Web App обнаружен');
+                await loadData();
+            } else {
+                console.log('Работа без Telegram Web App (тестовый режим)');
+                updateConnectionStatus('offline', '⚠️ Тестовый режим (без Telegram)');
+                
+                // Добавляем примеры для демонстрации
+                tasks = [
                     {
                         id: generateId(),
-                        text: 'Изучить новые функции Telegram Mini Apps',
+                        text: 'Изучить Telegram Mini Apps',
                         completed: false,
-                        createdAt: new Date(Date.now() - 3600000)
+                        createdAt: new Date(Date.now() - 3600000).toISOString()
                     },
                     {
                         id: generateId(),
-                        text: 'Купить продукты на ужин',
+                        text: 'Настроить Supabase',
                         completed: true,
-                        createdAt: new Date(Date.now() - 7200000)
+                        createdAt: new Date(Date.now() - 7200000).toISOString()
                     }
-                );
+                ];
 
-                notes.push(
+                notes = [
                     {
                         id: generateId(),
-                        text: 'Идея для нового проекта: интеграция с ChatGPT',
-                        createdAt: new Date(Date.now() - 1800000)
+                        text: 'Отличная идея для проекта!',
+                        createdAt: new Date(Date.now() - 1800000).toISOString()
                     }
-                );
+                ];
 
                 renderTasks();
                 renderNotes();
                 updateStats();
-                saveData(); // Сохраняем примеры
             }
         }
 
