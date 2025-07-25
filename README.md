@@ -1,1 +1,1 @@
-# telegram-miniapp
+Персональный помощник - первое приложение из серии Telegram Mini Apps
