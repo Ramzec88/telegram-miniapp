@@ -1,4 +1,4 @@
-// api/load.js - исправленная версия с правильным SQL
+// api/load.js - версия с service_role ключом
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
@@ -21,9 +21,11 @@ export default async function handler(req, res) {
     console.log('=== LOAD API START ===');
     console.log('initData получен:', !!initData);
     
-    // Проверяем environment variables
+    // Проверяем environment variables (приоритет service key)
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    
+    console.log('🔑 Используем ключ:', process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_ROLE' : 'ANON');
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ Environment variables отсутствуют');
@@ -31,7 +33,8 @@ export default async function handler(req, res) {
         error: 'Environment variables not configured',
         debug: {
           hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey
+          hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+          hasAnonKey: !!process.env.SUPABASE_ANON_KEY
         }
       });
     }
@@ -61,17 +64,20 @@ export default async function handler(req, res) {
 
     console.log('✅ Пользователь найден:', user.first_name, '(ID:', user.id, ')');
 
-    // Инициализируем Supabase клиент
+    // Создаем Supabase клиент с service_role ключом (обходит RLS)
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false
+      },
+      db: {
+        schema: 'public'
       }
     });
-    console.log('✅ Supabase клиент создан');
+    console.log('✅ Supabase клиент создан с service_role');
 
-    // Тестируем подключение к Supabase (ИСПРАВЛЕННЫЙ запрос)
+    // Тестируем подключение к Supabase
     try {
       console.log('Тестируем подключение к Supabase...');
       const { data, error } = await supabase
@@ -101,7 +107,7 @@ export default async function handler(req, res) {
     }
 
     // Загружаем задачи из Supabase
-    console.log('Загружаем задачи...');
+    console.log('Загружаем задачи пользователя...');
     const { data: tasks, error: tasksError } = await supabase
       .from('tasks')
       .select('id, text, completed, created_at')
@@ -116,7 +122,7 @@ export default async function handler(req, res) {
     console.log('✅ Задачи загружены:', tasks?.length || 0);
 
     // Загружаем заметки из Supabase
-    console.log('Загружаем заметки...');
+    console.log('Загружаем заметки пользователя...');
     const { data: notes, error: notesError } = await supabase
       .from('notes')
       .select('id, text, created_at')
@@ -153,6 +159,7 @@ export default async function handler(req, res) {
         userId: user.id,
         loadedTasks: formattedTasks.length,
         loadedNotes: formattedNotes.length,
+        keyType: process.env.SUPABASE_SERVICE_KEY ? 'service_role' : 'anon',
         mode: 'supabase-success'
       }
     });
@@ -162,7 +169,11 @@ export default async function handler(req, res) {
     console.error('Полная ошибка:', error);
     res.status(500).json({ 
       error: 'Server error: ' + error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      debug: {
+        errorType: error.name,
+        timestamp: new Date().toISOString(),
+        keyType: process.env.SUPABASE_SERVICE_KEY ? 'service_role' : 'anon'
+      }
     });
   }
 }
