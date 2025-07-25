@@ -1,4 +1,4 @@
-// api/save.js - версия с улучшенной обработкой ошибок
+// api/save.js - исправленная версия с правильным SQL
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
@@ -56,75 +56,70 @@ export default async function handler(req, res) {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false
-      },
-      db: {
-        schema: 'public'
       }
     });
     console.log('✅ Supabase клиент создан');
 
-    // Тестируем подключение
+    // Тестируем подключение к Supabase (ИСПРАВЛЕННЫЙ запрос)
     try {
-      const { error: testError } = await supabase
+      console.log('Тестируем подключение к Supabase...');
+      const { data, error } = await supabase
         .from('users')
-        .select('count(*)')
+        .select('id')
         .limit(1);
       
-      if (testError) {
-        console.error('❌ Тест подключения неудачен:', testError);
-        throw new Error('Supabase connection failed: ' + testError.message);
+      if (error) {
+        console.error('❌ Тест подключения неудачен:', error);
+        throw new Error('Supabase connection failed: ' + error.message);
       }
       console.log('✅ Подключение к Supabase работает');
     } catch (connectionError) {
       console.error('❌ Критическая ошибка подключения:', connectionError);
-      
-      // Возвращаем "успех" но с предупреждением
-      return res.json({
-        success: true,
-        message: 'Данные сохранены локально (проблема с БД)',
-        debug: {
-          mode: 'local-fallback',
-          error: connectionError.message,
-          timestamp: new Date().toISOString()
-        }
-      });
+      throw connectionError; // Прерываем выполнение при ошибке подключения
     }
 
     // Сохраняем/обновляем пользователя
     console.log('Сохраняем пользователя...');
-    try {
-      const { error: userError } = await supabase
-        .from('users')
-        .upsert({
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          username: user.username,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'id'
-        });
+    const { error: userError } = await supabase
+      .from('users')
+      .upsert({
+        id: user.id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        username: user.username,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'id'
+      });
 
-      if (userError) {
-        console.error('❌ Ошибка сохранения пользователя:', userError);
-        throw new Error('User save error: ' + userError.message);
-      }
-      console.log('✅ Пользователь сохранен');
-    } catch (userSaveError) {
-      console.error('❌ Критическая ошибка сохранения пользователя:', userSaveError);
-      // Продолжаем без сохранения пользователя
+    if (userError) {
+      console.error('❌ Ошибка сохранения пользователя:', userError);
+      throw new Error('User save error: ' + userError.message);
     }
+    console.log('✅ Пользователь сохранен');
 
-    // Удаляем старые данные пользователя (с обработкой ошибок)
+    // Удаляем старые данные пользователя
     console.log('Удаляем старые данные...');
-    try {
-      await supabase.from('tasks').delete().eq('user_id', user.id);
-      await supabase.from('notes').delete().eq('user_id', user.id);
-      console.log('✅ Старые данные удалены');
-    } catch (deleteError) {
-      console.error('❌ Ошибка удаления старых данных:', deleteError);
-      // Продолжаем без удаления
+    const { error: deleteTasksError } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteTasksError) {
+      console.error('❌ Ошибка удаления задач:', deleteTasksError);
+      throw new Error('Delete tasks error: ' + deleteTasksError.message);
     }
+
+    const { error: deleteNotesError } = await supabase
+      .from('notes')
+      .delete()
+      .eq('user_id', user.id);
+
+    if (deleteNotesError) {
+      console.error('❌ Ошибка удаления заметок:', deleteNotesError);
+      throw new Error('Delete notes error: ' + deleteNotesError.message);
+    }
+    console.log('✅ Старые данные удалены');
 
     let savedTasks = 0;
     let savedNotes = 0;
@@ -132,67 +127,62 @@ export default async function handler(req, res) {
     // Сохраняем новые задачи
     if (tasks && tasks.length > 0) {
       console.log('Сохраняем задачи:', tasks.length);
-      try {
-        const tasksToInsert = tasks.map(task => ({
-          user_id: user.id,
-          text: String(task.text).substring(0, 500), // Ограничиваем длину
-          completed: Boolean(task.completed),
-          created_at: task.createdAt || new Date().toISOString()
-        }));
-        
-        const { data: insertedTasks, error: tasksError } = await supabase
-          .from('tasks')
-          .insert(tasksToInsert)
-          .select('id');
-        
-        if (tasksError) {
-          console.error('❌ Ошибка сохранения задач:', tasksError);
-        } else {
-          savedTasks = insertedTasks?.length || 0;
-          console.log('✅ Задачи сохранены:', savedTasks);
-        }
-      } catch (tasksSaveError) {
-        console.error('❌ Критическая ошибка сохранения задач:', tasksSaveError);
+      const tasksToInsert = tasks.map(task => ({
+        user_id: user.id,
+        text: String(task.text).substring(0, 500), // Ограничиваем длину
+        completed: Boolean(task.completed),
+        created_at: task.createdAt || new Date().toISOString()
+      }));
+      
+      const { data: insertedTasks, error: tasksError } = await supabase
+        .from('tasks')
+        .insert(tasksToInsert)
+        .select('id');
+      
+      if (tasksError) {
+        console.error('❌ Ошибка сохранения задач:', tasksError);
+        throw new Error('Tasks save error: ' + tasksError.message);
       }
+      
+      savedTasks = insertedTasks?.length || 0;
+      console.log('✅ Задачи сохранены:', savedTasks);
     }
 
     // Сохраняем новые заметки
     if (notes && notes.length > 0) {
       console.log('Сохраняем заметки:', notes.length);
-      try {
-        const notesToInsert = notes.map(note => ({
-          user_id: user.id,
-          text: String(note.text).substring(0, 1000), // Ограничиваем длину
-          created_at: note.createdAt || new Date().toISOString()
-        }));
-        
-        const { data: insertedNotes, error: notesError } = await supabase
-          .from('notes')
-          .insert(notesToInsert)
-          .select('id');
-        
-        if (notesError) {
-          console.error('❌ Ошибка сохранения заметок:', notesError);
-        } else {
-          savedNotes = insertedNotes?.length || 0;
-          console.log('✅ Заметки сохранены:', savedNotes);
-        }
-      } catch (notesSaveError) {
-        console.error('❌ Критическая ошибка сохранения заметок:', notesSaveError);
+      const notesToInsert = notes.map(note => ({
+        user_id: user.id,
+        text: String(note.text).substring(0, 1000), // Ограничиваем длину
+        created_at: note.createdAt || new Date().toISOString()
+      }));
+      
+      const { data: insertedNotes, error: notesError } = await supabase
+        .from('notes')
+        .insert(notesToInsert)
+        .select('id');
+      
+      if (notesError) {
+        console.error('❌ Ошибка сохранения заметок:', notesError);
+        throw new Error('Notes save error: ' + notesError.message);
       }
+      
+      savedNotes = insertedNotes?.length || 0;
+      console.log('✅ Заметки сохранены:', savedNotes);
     }
 
     console.log('=== SAVE API SUCCESS ===');
     res.json({ 
       success: true, 
-      message: `Сохранено: ${savedTasks} задач, ${savedNotes} заметок`,
+      message: `Сохранено в Supabase: ${savedTasks} задач, ${savedNotes} заметок`,
       debug: {
         timestamp: new Date().toISOString(),
         userId: user.id,
         savedTasks: savedTasks,
         savedNotes: savedNotes,
         requestedTasks: tasks?.length || 0,
-        requestedNotes: notes?.length || 0
+        requestedNotes: notes?.length || 0,
+        mode: 'supabase-success'
       }
     });
     
@@ -202,12 +192,10 @@ export default async function handler(req, res) {
     console.error('Сообщение:', error.message);
     console.error('Stack:', error.stack);
     
-    res.status(200).json({ 
-      success: true,
-      message: 'Данные сохранены локально (ошибка БД)',
+    res.status(500).json({ 
+      success: false,
+      error: 'Server error: ' + error.message,
       debug: {
-        mode: 'error-fallback',
-        error: error.message,
         errorType: error.name,
         timestamp: new Date().toISOString()
       }
