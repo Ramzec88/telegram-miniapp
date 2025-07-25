@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
-
+// api/load.js - упрощенная версия для диагностики
 export default async function handler(req, res) {
   // CORS заголовки
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -20,60 +14,57 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { initData } = req.query;
+    // Проверяем переменные окружения
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
     
-    if (!initData) {
-      return res.status(400).json({ error: 'Init data required' });
+    console.log('=== ДИАГНОСТИКА API ===');
+    console.log('SUPABASE_URL exists:', !!supabaseUrl);
+    console.log('SUPABASE_URL value:', supabaseUrl);
+    console.log('SUPABASE_ANON_KEY exists:', !!supabaseKey);
+    console.log('SUPABASE_ANON_KEY length:', supabaseKey ? supabaseKey.length : 0);
+    console.log('Query params:', req.query);
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.log('❌ Отсутствуют environment variables');
+      return res.status(500).json({ 
+        error: 'Environment variables not configured',
+        debug: {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey
+        }
+      });
     }
 
-    const urlParams = new URLSearchParams(initData);
-    const userDataStr = urlParams.get('user');
-    const user = userDataStr ? JSON.parse(userDataStr) : null;
-    
-    if (!user) {
-      return res.status(400).json({ error: 'User data not found' });
-    }
-
-    // Загружаем задачи
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (tasksError) throw tasksError;
-
-    // Загружаем заметки
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (notesError) throw notesError;
-
-    // Преобразуем в формат приложения
-    const formattedTasks = (tasks || []).map(task => ({
-      id: task.id,
-      text: task.text,
-      completed: task.completed,
-      createdAt: task.created_at
-    }));
-
-    const formattedNotes = (notes || []).map(note => ({
-      id: note.id,
-      text: note.text,
-      createdAt: note.created_at
-    }));
-
-    res.json({
-      tasks: formattedTasks,
-      notes: formattedNotes,
-      updatedAt: new Date().toISOString()
+    // Временно возвращаем тестовые данные
+    console.log('✅ Возвращаем тестовые данные');
+    return res.json({
+      tasks: [
+        {
+          id: 'test1',
+          text: 'Тестовая задача из API',
+          completed: false,
+          createdAt: new Date().toISOString()
+        }
+      ],
+      notes: [
+        {
+          id: 'test2', 
+          text: 'Тестовая заметка из API',
+          createdAt: new Date().toISOString()
+        }
+      ],
+      debug: {
+        timestamp: new Date().toISOString(),
+        environment: 'working'
+      }
     });
     
   } catch (error) {
-    console.error('Ошибка загрузки:', error);
-    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
+    console.error('❌ Ошибка в API:', error);
+    return res.status(500).json({ 
+      error: 'Server error: ' + error.message,
+      stack: error.stack
+    });
   }
 }
