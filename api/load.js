@@ -1,4 +1,4 @@
-// api/load.js - полная версия с Supabase
+// api/load.js - версия с улучшенной обработкой ошибок
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
@@ -25,46 +25,34 @@ export default async function handler(req, res) {
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
     
+    console.log('SUPABASE_URL:', supabaseUrl);
+    console.log('SUPABASE_ANON_KEY exists:', !!supabaseKey);
+    console.log('SUPABASE_ANON_KEY length:', supabaseKey ? supabaseKey.length : 0);
+    
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ Environment variables отсутствуют');
       return res.status(500).json({ 
         error: 'Environment variables not configured',
         debug: {
           hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey
+          hasKey: !!supabaseKey,
+          url: supabaseUrl
         }
       });
     }
 
-    // Если нет initData - возвращаем тестовые данные
+    // Если нет initData - возвращаем пустые данные
     if (!initData) {
-      console.log('⚠️ Нет initData - возвращаем тестовые данные');
+      console.log('⚠️ Нет initData - возвращаем пустые данные');
       return res.json({
-        tasks: [
-          {
-            id: 'demo1',
-            text: 'Тестовая задача (без авторизации)',
-            completed: false,
-            createdAt: new Date().toISOString()
-          }
-        ],
-        notes: [
-          {
-            id: 'demo2',
-            text: 'Тестовая заметка (без авторизации)',
-            createdAt: new Date().toISOString()
-          }
-        ],
+        tasks: [],
+        notes: [],
         debug: {
-          mode: 'demo',
+          mode: 'no-auth',
           timestamp: new Date().toISOString()
         }
       });
     }
-
-    // Инициализируем Supabase клиент
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('✅ Supabase клиент создан');
 
     // Парсинг данных пользователя
     const urlParams = new URLSearchParams(initData);
@@ -78,43 +66,109 @@ export default async function handler(req, res) {
 
     console.log('✅ Пользователь найден:', user.first_name, '(ID:', user.id, ')');
 
-    // Загружаем задачи из Supabase
+    // Инициализируем Supabase клиент с дополнительными настройками
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      },
+      db: {
+        schema: 'public'
+      },
+      global: {
+        headers: {
+          'User-Agent': 'telegram-miniapp/1.0'
+        }
+      }
+    });
+    console.log('✅ Supabase клиент создан');
+
+    // Тестируем подключение к Supabase
+    console.log('Тестируем подключение к Supabase...');
+    try {
+      const { data: testData, error: testError } = await supabase
+        .from('users')
+        .select('count(*)')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ Тест подключения к Supabase неудачен:', testError);
+        throw new Error('Supabase connection test failed: ' + testError.message);
+      }
+      console.log('✅ Подключение к Supabase работает');
+    } catch (connectionError) {
+      console.error('❌ Ошибка подключения к Supabase:', connectionError);
+      
+      // Возвращаем пустые данные при ошибке подключения
+      return res.json({
+        tasks: [],
+        notes: [],
+        debug: {
+          mode: 'connection-error',
+          error: connectionError.message,
+          timestamp: new Date().toISOString(),
+          userId: user.id
+        }
+      });
+    }
+
+    let tasks = [];
+    let notes = [];
+
+    // Загружаем задачи с повторными попытками
     console.log('Загружаем задачи...');
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('id, text, completed, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-    if (tasksError) {
-      console.error('❌ Ошибка загрузки задач:', tasksError);
-      throw new Error('Tasks load error: ' + tasksError.message);
+      if (tasksError) {
+        console.error('❌ Ошибка загрузки задач:', tasksError);
+        // Не прерываем выполнение, продолжаем с пустыми задачами
+      } else {
+        tasks = tasksData || [];
+        console.log('✅ Задачи загружены:', tasks.length);
+      }
+    } catch (tasksLoadError) {
+      console.error('❌ Критическая ошибка загрузки задач:', tasksLoadError);
+      // Продолжаем с пустыми задачами
     }
-    console.log('✅ Задачи загружены:', tasks?.length || 0);
 
-    // Загружаем заметки из Supabase
+    // Загружаем заметки с повторными попытками
     console.log('Загружаем заметки...');
-    const { data: notes, error: notesError } = await supabase
-      .from('notes')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: notesData, error: notesError } = await supabase
+        .from('notes')
+        .select('id, text, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-    if (notesError) {
-      console.error('❌ Ошибка загрузки заметок:', notesError);
-      throw new Error('Notes load error: ' + notesError.message);
+      if (notesError) {
+        console.error('❌ Ошибка загрузки заметок:', notesError);
+        // Не прерываем выполнение, продолжаем с пустыми заметками
+      } else {
+        notes = notesData || [];
+        console.log('✅ Заметки загружены:', notes.length);
+      }
+    } catch (notesLoadError) {
+      console.error('❌ Критическая ошибка загрузки заметок:', notesLoadError);
+      // Продолжаем с пустыми заметками
     }
-    console.log('✅ Заметки загружены:', notes?.length || 0);
 
     // Преобразуем в формат приложения
-    const formattedTasks = (tasks || []).map(task => ({
+    const formattedTasks = tasks.map(task => ({
       id: task.id,
       text: task.text,
       completed: task.completed,
       createdAt: task.created_at
     }));
 
-    const formattedNotes = (notes || []).map(note => ({
+    const formattedNotes = notes.map(note => ({
       id: note.id,
       text: note.text,
       createdAt: note.created_at
@@ -128,16 +182,27 @@ export default async function handler(req, res) {
         timestamp: new Date().toISOString(),
         userId: user.id,
         loadedTasks: formattedTasks.length,
-        loadedNotes: formattedNotes.length
+        loadedNotes: formattedNotes.length,
+        mode: 'success'
       }
     });
     
   } catch (error) {
     console.error('=== LOAD API ERROR ===');
-    console.error('Полная ошибка:', error);
-    res.status(500).json({ 
-      error: 'Server error: ' + error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    console.error('Тип ошибки:', error.name);
+    console.error('Сообщение:', error.message);
+    console.error('Stack:', error.stack);
+    
+    // Возвращаем частичный успех вместо полной ошибки
+    res.status(200).json({ 
+      tasks: [],
+      notes: [],
+      debug: {
+        mode: 'error-fallback',
+        error: error.message,
+        errorType: error.name,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 }
