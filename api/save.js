@@ -1,4 +1,4 @@
-// api/save.js - исправленная версия с правильным SQL
+// api/save.js - версия с service_role ключом
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
@@ -23,9 +23,11 @@ export default async function handler(req, res) {
     console.log('Tasks count:', tasks?.length || 0);
     console.log('Notes count:', notes?.length || 0);
     
-    // Проверяем environment variables
+    // Проверяем environment variables (приоритет service key)
     const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    
+    console.log('🔑 Используем ключ:', process.env.SUPABASE_SERVICE_KEY ? 'SERVICE_ROLE' : 'ANON');
     
     if (!supabaseUrl || !supabaseKey) {
       console.error('❌ Environment variables отсутствуют');
@@ -33,7 +35,8 @@ export default async function handler(req, res) {
         error: 'Environment variables not configured',
         debug: {
           hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey
+          hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+          hasAnonKey: !!process.env.SUPABASE_ANON_KEY
         }
       });
     }
@@ -50,17 +53,20 @@ export default async function handler(req, res) {
 
     console.log('✅ Пользователь найден:', user.first_name, '(ID:', user.id, ')');
 
-    // Инициализируем Supabase клиент
+    // Создаем Supabase клиент с service_role ключом (обходит RLS)
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false
+      },
+      db: {
+        schema: 'public'
       }
     });
-    console.log('✅ Supabase клиент создан');
+    console.log('✅ Supabase клиент создан с service_role');
 
-    // Тестируем подключение к Supabase (ИСПРАВЛЕННЫЙ запрос)
+    // Тестируем подключение
     try {
       console.log('Тестируем подключение к Supabase...');
       const { data, error } = await supabase
@@ -75,10 +81,10 @@ export default async function handler(req, res) {
       console.log('✅ Подключение к Supabase работает');
     } catch (connectionError) {
       console.error('❌ Критическая ошибка подключения:', connectionError);
-      throw connectionError; // Прерываем выполнение при ошибке подключения
+      throw connectionError;
     }
 
-    // Сохраняем/обновляем пользователя
+    // Сохраняем/обновляем пользователя (service_role обходит RLS)
     console.log('Сохраняем пользователя...');
     const { error: userError } = await supabase
       .from('users')
@@ -87,6 +93,7 @@ export default async function handler(req, res) {
         first_name: user.first_name,
         last_name: user.last_name,
         username: user.username,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'id'
@@ -129,9 +136,10 @@ export default async function handler(req, res) {
       console.log('Сохраняем задачи:', tasks.length);
       const tasksToInsert = tasks.map(task => ({
         user_id: user.id,
-        text: String(task.text).substring(0, 500), // Ограничиваем длину
+        text: String(task.text).substring(0, 500),
         completed: Boolean(task.completed),
-        created_at: task.createdAt || new Date().toISOString()
+        created_at: task.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
       
       const { data: insertedTasks, error: tasksError } = await supabase
@@ -153,8 +161,9 @@ export default async function handler(req, res) {
       console.log('Сохраняем заметки:', notes.length);
       const notesToInsert = notes.map(note => ({
         user_id: user.id,
-        text: String(note.text).substring(0, 1000), // Ограничиваем длину
-        created_at: note.createdAt || new Date().toISOString()
+        text: String(note.text).substring(0, 1000),
+        created_at: note.createdAt || new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }));
       
       const { data: insertedNotes, error: notesError } = await supabase
@@ -174,7 +183,7 @@ export default async function handler(req, res) {
     console.log('=== SAVE API SUCCESS ===');
     res.json({ 
       success: true, 
-      message: `Сохранено в Supabase: ${savedTasks} задач, ${savedNotes} заметок`,
+      message: `✅ Сохранено в Supabase: ${savedTasks} задач, ${savedNotes} заметок`,
       debug: {
         timestamp: new Date().toISOString(),
         userId: user.id,
@@ -182,6 +191,7 @@ export default async function handler(req, res) {
         savedNotes: savedNotes,
         requestedTasks: tasks?.length || 0,
         requestedNotes: notes?.length || 0,
+        keyType: process.env.SUPABASE_SERVICE_KEY ? 'service_role' : 'anon',
         mode: 'supabase-success'
       }
     });
@@ -197,7 +207,8 @@ export default async function handler(req, res) {
       error: 'Server error: ' + error.message,
       debug: {
         errorType: error.name,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        keyType: process.env.SUPABASE_SERVICE_KEY ? 'service_role' : 'anon'
       }
     });
   }
