@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Персональный помощник</title>
+    <title>Персональный помощник Артемий</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
@@ -13,252 +13,558 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: var(--tg-theme-bg-color, #ffffff);
             color: var(--tg-theme-text-color, #000000);
             padding: 16px;
             min-height: 100vh;
+            line-height: 1.5;
         }
 
         .app-header {
             text-align: center;
             margin-bottom: 24px;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
+            padding: 20px;
+            background: linear-gradient(135deg, #4a90e2 0%, #7b68ee 50%, #9b59b6 100%);
+            border-radius: 20px;
             color: white;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 8px 32px rgba(74, 144, 226, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .app-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100px) translateY(-100px); }
+            50% { transform: translateX(100px) translateY(100px); }
         }
 
         .app-header h1 {
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 28px;
+            font-weight: 700;
             margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
         }
 
-        .debug-info {
-            background: #f0f0f0;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-size: 12px;
-            font-family: monospace;
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ddd;
+        .app-header p {
+            opacity: 0.9;
+            font-size: 16px;
+            position: relative;
+            z-index: 1;
         }
 
         .connection-status {
             text-align: center;
-            padding: 8px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
 
         .connection-status.online {
-            background: #d4f6dd;
-            color: #1b8332;
-            border: 1px solid #86e29b;
+            background: linear-gradient(135deg, #d4f6dd, #a7f3d0);
+            color: #065f46;
+            border: 2px solid #86e29b;
         }
 
         .connection-status.offline {
-            background: #ffd6d6;
-            color: #d32f2f;
-            border: 1px solid #ffb3b3;
+            background: linear-gradient(135deg, #ffd6d6, #fecaca);
+            color: #b91c1c;
+            border: 2px solid #ffb3b3;
         }
 
         .connection-status.loading {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
+            background: linear-gradient(135deg, #fff3cd, #fef3c7);
+            color: #92400e;
+            border: 2px solid #fbbf24;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
         }
 
         .tabs {
             display: flex;
-            background: #f0f0f0;
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 24px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 16px;
+            padding: 6px;
+            margin-bottom: 28px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
 
         .tab {
             flex: 1;
-            padding: 12px;
+            padding: 16px 12px;
             text-align: center;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--tg-theme-button-color, #4a90e2);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            z-index: 0;
+        }
+
+        .tab.active::before {
+            transform: scaleX(1);
         }
 
         .tab.active {
-            background: #007AFF;
-            color: #ffffff;
-            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            box-shadow: 0 4px 16px rgba(74, 144, 226, 0.4);
+        }
+
+        .tab span {
+            position: relative;
+            z-index: 1;
         }
 
         .tab-content {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .tab-content.active {
             display: block;
         }
 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .input-group {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 12px;
+            margin-bottom: 24px;
+            position: relative;
         }
 
         .input-field {
             flex: 1;
-            padding: 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            background: #ffffff;
-            color: #000000;
+            padding: 16px 20px;
+            border: 2px solid var(--tg-theme-secondary-bg-color, #e2e8f0);
+            border-radius: 16px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
             font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #4a90e2);
+            box-shadow: 0 4px 16px rgba(74, 144, 226, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .input-field::placeholder {
+            color: var(--tg-theme-hint-color, #a0aec0);
         }
 
         .btn {
-            padding: 12px 20px;
-            background: #007AFF;
-            color: #ffffff;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, var(--tg-theme-button-color, #4a90e2) 0%, #667eea 100%);
+            color: var(--tg-theme-button-text-color, #ffffff);
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             cursor: pointer;
-            font-weight: 600;
-            font-size: 16px;
+            font-weight: 700;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(74, 144, 226, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
         }
 
         .btn-small {
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
         }
 
         .btn-danger {
-            background: #FF3B30;
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            box-shadow: 0 6px 20px rgba(229, 62, 62, 0.4);
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 8px 28px rgba(229, 62, 62, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #38a169, #2f855a);
+            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
         }
 
         .item {
-            background: #f8f9fa;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--tg-theme-button-color, #4a90e2);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            border-color: var(--tg-theme-button-color, #4a90e2);
         }
 
         .item.completed {
             opacity: 0.6;
             text-decoration: line-through;
+            background: linear-gradient(135deg, #f0fff4, #e6fffa);
+        }
+
+        .item.completed::before {
+            background: #38a169;
+            transform: scaleY(1);
         }
 
         .item-content {
             flex: 1;
+            margin-right: 16px;
         }
 
         .item-title {
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            color: var(--tg-theme-text-color, #2d3748);
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .item-date {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #718096);
+            font-weight: 500;
         }
 
         .item-actions {
             display: flex;
-            gap: 8px;
+            gap: 10px;
+            flex-shrink: 0;
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
-            color: #999999;
+            padding: 60px 20px;
+            color: var(--tg-theme-hint-color, #a0aec0);
         }
 
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.6;
+            animation: float 3s ease-in-out infinite;
         }
 
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .empty-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .empty-subtext {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .loading {
+            pointer-events: none;
+        }
+
+        .loading .btn {
+            opacity: 0.7;
+        }
+
+        /* Темная тема поддержка */
+        @media (prefers-color-scheme: dark) {
+            .item {
+                background: var(--tg-theme-secondary-bg-color, #2d3748);
+            }
+            
+            .tabs {
+                background: var(--tg-theme-secondary-bg-color, #2d3748);
+            }
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            
+            .app-header {
+                padding: 16px;
+            }
+            
+            .app-header h1 {
+                font-size: 24px;
+            }
+            
+            .app-header p {
+                font-size: 14px;
+            }
+            
+            .input-field, .btn {
+                font-size: 16px;
+                padding: 14px 18px;
+            }
+            
+            .stat-number {
+                font-size: 28px;
+            }
+            
+            .item {
+                padding: 16px;
+            }
+            
+            .item-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+
+        /* Анимации для добавления элементов */
+        .item-enter {
+            animation: slideInUp 0.5s ease;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Успешные действия */
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #38a169, #2f855a);
             color: white;
-            padding: 16px;
+            padding: 12px 20px;
             border-radius: 12px;
-            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
+            z-index: 1000;
+            animation: slideInRight 0.3s ease;
         }
 
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            opacity: 0.9;
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
     </style>
 </head>
 <body>
     <div class="app-header">
-        <h1>🤖 Персональный помощник (ДИАГНОСТИКА)</h1>
-        <p>Отладочная версия для поиска проблем</p>
-    </div>
-
-    <div class="debug-info" id="debugInfo">
-        Загрузка диагностической информации...
+        <h1>🤖 Персональный помощник Артемий</h1>
+        <p>Ваш надежный спутник в организации дел и мыслей</p>
     </div>
 
     <div class="connection-status loading" id="connectionStatus">
-        🔄 Проверка подключения...
+        🔄 Подключение к облачному хранилищу...
     </div>
 
     <div class="stats">
-        <div class="stat-card">
+        <div class="stat-card" id="taskCard">
             <div class="stat-number" id="taskCount">0</div>
             <div class="stat-label">Задач</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" id="noteCard">
             <div class="stat-number" id="noteCount">0</div>
             <div class="stat-label">Заметок</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card" id="completedCard">
             <div class="stat-number" id="completedCount">0</div>
             <div class="stat-label">Выполнено</div>
         </div>
     </div>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('tasks')">📋 Задачи</div>
-        <div class="tab" onclick="switchTab('notes')">📝 Заметки</div>
+        <div class="tab active" onclick="switchTab('tasks')">
+            <span>📋 Задачи</span>
+        </div>
+        <div class="tab" onclick="switchTab('notes')">
+            <span>📝 Заметки</span>
+        </div>
     </div>
 
     <div id="tasks" class="tab-content active">
         <div class="input-group">
-            <input type="text" id="taskInput" class="input-field" placeholder="Добавить новую задачу..." maxlength="100">
+            <input type="text" id="taskInput" class="input-field" placeholder="Что нужно сделать?" maxlength="100">
             <button class="btn" onclick="addTask()">➕</button>
         </div>
         <div id="taskList">
             <div class="empty-state">
-                <p>Задач пока нет. Добавьте первую!</p>
+                <div class="empty-icon">📋</div>
+                <div class="empty-text">Пока нет задач</div>
+                <div class="empty-subtext">Добавьте первую задачу, чтобы начать</div>
             </div>
         </div>
     </div>
 
     <div id="notes" class="tab-content">
         <div class="input-group">
-            <input type="text" id="noteInput" class="input-field" placeholder="Добавить заметку..." maxlength="200">
+            <input type="text" id="noteInput" class="input-field" placeholder="Запишите важную мысль..." maxlength="200">
             <button class="btn" onclick="addNote()">➕</button>
         </div>
         <div id="noteList">
             <div class="empty-state">
-                <p>Заметок пока нет. Создайте первую!</p>
+                <div class="empty-icon">📝</div>
+                <div class="empty-text">Пока нет заметок</div>
+                <div class="empty-subtext">Сохраните важные мысли и идеи</div>
             </div>
         </div>
     </div>
@@ -270,116 +576,99 @@
             tg.ready();
             tg.expand();
             tg.MainButton.hide();
+            // Применяем тему Telegram
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#4a90e2');
         }
 
-        // Хранение данных
+        // Состояние приложения
         let tasks = [];
         let notes = [];
         let currentTab = 'tasks';
-        let debugLog = [];
+        let isLoading = false;
 
-        function addDebugLog(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            debugLog.push(`[${timestamp}] ${message}`);
-            document.getElementById('debugInfo').innerHTML = debugLog.slice(-20).join('<br>');
-            console.log(`[DEBUG] ${message}`);
-        }
-
-        // Генерация уникальных ID
+        // Утилиты
         function generateId() {
             return Date.now().toString(36) + Math.random().toString(36).substr(2);
         }
 
-        // Обновление статуса подключения
         function updateConnectionStatus(status, message) {
             const statusEl = document.getElementById('connectionStatus');
             statusEl.className = `connection-status ${status}`;
             statusEl.innerHTML = message;
-            addDebugLog(`Статус: ${message}`);
         }
 
-        // Сохранение данных на сервере
-        async function saveData() {
-            addDebugLog('🔄 Начинаем сохранение данных...');
+        function setLoading(loading) {
+            isLoading = loading;
+            document.body.classList.toggle('loading', loading);
+        }
+
+        function showSuccessMessage(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
             
-            // Проверяем наличие Telegram WebApp
-            if (!tg) {
-                addDebugLog('❌ Telegram WebApp не обнаружен');
-                updateConnectionStatus('offline', '❌ Нет Telegram WebApp');
-                return;
-            }
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
 
-            if (!tg.initData) {
-                addDebugLog('❌ initData отсутствует в Telegram WebApp');
-                updateConnectionStatus('offline', '❌ Нет initData от Telegram');
-                return;
-            }
-
-            addDebugLog(`✅ initData получен, длина: ${tg.initData.length}`);
-            addDebugLog(`📊 Данные для сохранения: ${tasks.length} задач, ${notes.length} заметок`);
-
+        // API взаимодействие
+        async function saveData() {
+            if (!tg?.initData || isLoading) return;
+            
+            setLoading(true);
             try {
-                const payload = {
-                    initData: tg.initData,
-                    tasks: tasks,
-                    notes: notes
-                };
-
-                addDebugLog('🚀 Отправляем POST запрос к /api/save');
-                
                 const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        initData: tg.initData,
+                        tasks: tasks,
+                        notes: notes
+                    })
                 });
-                
-                addDebugLog(`📡 Ответ сервера: HTTP ${response.status}`);
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    addDebugLog(`❌ Ошибка HTTP: ${errorText}`);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const result = await response.json();
-                addDebugLog(`✅ Успешный ответ: ${JSON.stringify(result)}`);
-                updateConnectionStatus('online', '✅ Данные сохранены!');
+                updateConnectionStatus('online', '✅ Данные сохранены в облаке');
                 
             } catch (error) {
-                addDebugLog(`💥 Ошибка сохранения: ${error.message}`);
-                updateConnectionStatus('offline', '❌ Ошибка сохранения');
+                console.error('Ошибка сохранения:', error);
+                updateConnectionStatus('offline', '❌ Ошибка сохранения данных');
+                if (tg) tg.showAlert('Не удалось сохранить данные');
+            } finally {
+                setLoading(false);
             }
         }
 
-        // Загрузка данных с сервера
         async function loadData() {
-            addDebugLog('🔄 Начинаем загрузку данных...');
+            if (isLoading) return;
+            
+            setLoading(true);
+            updateConnectionStatus('loading', '🔄 Загрузка данных...');
             
             try {
                 let url = '/api/load';
-                
                 if (tg?.initData) {
-                    addDebugLog(`✅ Используем initData от Telegram (длина: ${tg.initData.length})`);
                     url += `?initData=${encodeURIComponent(tg.initData)}`;
                 } else {
-                    addDebugLog('⚠️ initData отсутствует, используем тестовый режим');
                     url += '?test=1';
                 }
                 
-                addDebugLog(`🚀 Отправляем GET запрос: ${url.substring(0, 50)}...`);
-                
                 const response = await fetch(url);
-                addDebugLog(`📡 Ответ сервера: HTTP ${response.status}`);
-                
                 if (!response.ok) {
                     const errorText = await response.text();
-                    addDebugLog(`❌ Ошибка HTTP: ${errorText}`);
                     throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const data = await response.json();
-                addDebugLog(`✅ Данные получены: ${data.tasks?.length || 0} задач, ${data.notes?.length || 0} заметок`);
-                
                 tasks = data.tasks || [];
                 notes = data.notes || [];
                 
@@ -387,26 +676,41 @@
                 renderNotes();
                 updateStats();
                 
-                updateConnectionStatus('online', '✅ Данные загружены');
+                if (tg?.initData) {
+                    updateConnectionStatus('online', '✅ Подключено к облаку');
+                } else {
+                    updateConnectionStatus('offline', '⚠️ Демо режим');
+                }
                 
             } catch (error) {
-                addDebugLog(`💥 Ошибка загрузки: ${error.message}`);
-                updateConnectionStatus('offline', '❌ Ошибка загрузки');
+                console.error('Ошибка загрузки:', error);
+                updateConnectionStatus('offline', '❌ Работа без интернета');
                 
-                // Показываем тестовые данные при ошибке
-                tasks = [{
-                    id: generateId(),
-                    text: 'Тестовая задача (ошибка загрузки)',
-                    completed: false,
-                    createdAt: new Date().toISOString()
-                }];
-                renderTasks();
-                updateStats();
+                // Показываем пример при ошибке
+                if (tasks.length === 0 && notes.length === 0) {
+                    tasks = [{
+                        id: generateId(),
+                        text: 'Познакомиться с возможностями Артемия',
+                        completed: false,
+                        createdAt: new Date().toISOString()
+                    }];
+                    notes = [{
+                        id: generateId(),
+                        text: 'Артемий помогает организовать дела и мысли',
+                        createdAt: new Date().toISOString()
+                    }];
+                    renderTasks();
+                    renderNotes();
+                    updateStats();
+                }
+            } finally {
+                setLoading(false);
             }
         }
 
-        // Переключение вкладок
+        // Управление вкладками
         function switchTab(tabName) {
+            // Анимация смены вкладок
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
@@ -414,25 +718,51 @@
             document.getElementById(tabName).classList.add('active');
             
             currentTab = tabName;
-            addDebugLog(`Переключились на вкладку: ${tabName}`);
+            
+            // Небольшая вибрация при переключении
+            if (tg) tg.HapticFeedback.impactOccurred('light');
         }
 
         // Обновление статистики
         function updateStats() {
             const completedTasks = tasks.filter(task => task.completed).length;
-            document.getElementById('taskCount').textContent = tasks.length;
-            document.getElementById('noteCount').textContent = notes.length;
-            document.getElementById('completedCount').textContent = completedTasks;
+            
+            // Анимированное обновление чисел
+            animateNumber('taskCount', tasks.length);
+            animateNumber('noteCount', notes.length);
+            animateNumber('completedCount', completedTasks);
         }
 
-        // Добавление задачи
+        function animateNumber(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            const startValue = parseInt(element.textContent) || 0;
+            const duration = 500;
+            const startTime = performance.now();
+            
+            function updateNumber(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easedProgress = 1 - Math.pow(1 - progress, 3); // easeOut
+                const currentValue = Math.round(startValue + (targetValue - startValue) * easedProgress);
+                
+                element.textContent = currentValue;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                }
+            }
+            
+            requestAnimationFrame(updateNumber);
+        }
+
+        // Работа с задачами
         async function addTask() {
             const input = document.getElementById('taskInput');
             const text = input.value.trim();
             
             if (!text) {
-                addDebugLog('❌ Попытка добавить пустую задачу');
-                if (tg) tg.showAlert('Введите текст задачи!');
+                input.focus();
+                if (tg) tg.showAlert('Введите описание задачи');
                 return;
             }
 
@@ -448,22 +778,19 @@
             renderTasks();
             updateStats();
             
-            addDebugLog(`➕ Добавлена задача: "${text}"`);
+            showSuccessMessage('Задача добавлена!');
+            if (tg) tg.HapticFeedback.impactOccurred('medium');
             
-            if (tg) tg.HapticFeedback.impactOccurred('light');
-            
-            // Сохраняем на сервере
             await saveData();
         }
 
-        // Добавление заметки
         async function addNote() {
             const input = document.getElementById('noteInput');
             const text = input.value.trim();
             
             if (!text) {
-                addDebugLog('❌ Попытка добавить пустую заметку');
-                if (tg) tg.showAlert('Введите текст заметки!');
+                input.focus();
+                if (tg) tg.showAlert('Введите текст заметки');
                 return;
             }
 
@@ -478,139 +805,94 @@
             renderNotes();
             updateStats();
             
-            addDebugLog(`📝 Добавлена заметка: "${text}"`);
+            showSuccessMessage('Заметка сохранена!');
+            if (tg) tg.HapticFeedback.impactOccurred('medium');
             
-            if (tg) tg.HapticFeedback.impactOccurred('light');
-            
-            // Сохраняем на сервере
             await saveData();
         }
 
-        // Отображение задач
+        // Отображение данных
         function renderTasks() {
             const container = document.getElementById('taskList');
             
             if (tasks.length === 0) {
-                container.innerHTML = `<div class="empty-state"><p>Задач пока нет. Добавьте первую!</p></div>`;
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-text">Пока нет задач</div>
+                        <div class="empty-subtext">Добавьте первую задачу, чтобы начать</div>
+                    </div>
+                `;
                 return;
             }
 
             container.innerHTML = tasks.map(task => `
-                <div class="item ${task.completed ? 'completed' : ''}">
+                <div class="item ${task.completed ? 'completed' : ''} item-enter">
                     <div class="item-content">
                         <div class="item-title">${escapeHtml(task.text)}</div>
+                        <div class="item-date">${formatDate(task.createdAt)}</div>
                     </div>
                     <div class="item-actions">
-                        <button class="btn btn-small" onclick="toggleTask('${task.id}')">
-                            ${task.completed ? '↩️' : '✅'}
+                        <button class="btn btn-small ${task.completed ? 'btn-success' : ''}" onclick="toggleTask('${task.id}')">
+                            ${task.completed ? '✅' : '⏳'}
                         </button>
-                        <button class="btn btn-small btn-danger" onclick="deleteTask('${task.id}')">🗑️</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteTask('${task.id}')">
+                            🗑️
+                        </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Отображение заметок
         function renderNotes() {
             const container = document.getElementById('noteList');
             
             if (notes.length === 0) {
-                container.innerHTML = `<div class="empty-state"><p>Заметок пока нет. Создайте первую!</p></div>`;
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <div class="empty-text">Пока нет заметок</div>
+                        <div class="empty-subtext">Сохраните важные мысли и идеи</div>
+                    </div>
+                `;
                 return;
             }
 
             container.innerHTML = notes.map(note => `
-                <div class="item">
+                <div class="item item-enter">
                     <div class="item-content">
                         <div class="item-title">${escapeHtml(note.text)}</div>
+                        <div class="item-date">${formatDate(note.createdAt)}</div>
                     </div>
                     <div class="item-actions">
-                        <button class="btn btn-small btn-danger" onclick="deleteNote('${note.id}')">🗑️</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteNote('${note.id}')">
+                            🗑️
+                        </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Переключение статуса задачи
+        // Действия с элементами
         async function toggleTask(id) {
             const task = tasks.find(t => t.id === id);
             if (task) {
                 task.completed = !task.completed;
                 renderTasks();
                 updateStats();
-                addDebugLog(`✏️ Изменен статус задачи: ${task.text}`);
-                if (tg) tg.HapticFeedback.impactOccurred('medium');
+                
+                showSuccessMessage(task.completed ? 'Задача выполнена!' : 'Задача восстановлена');
+                if (tg) tg.HapticFeedback.impactOccurred('heavy');
+                
                 await saveData();
             }
         }
 
-        // Удаление задачи
         async function deleteTask(id) {
             const task = tasks.find(t => t.id === id);
-            tasks = tasks.filter(t => t.id !== id);
-            renderTasks();
-            updateStats();
-            addDebugLog(`🗑️ Удалена задача: ${task?.text}`);
-            if (tg) tg.HapticFeedback.impactOccurred('heavy');
-            await saveData();
-        }
-
-        // Удаление заметки
-        async function deleteNote(id) {
-            const note = notes.find(n => n.id === id);
-            notes = notes.filter(n => n.id !== id);
-            renderNotes();
-            updateStats();
-            addDebugLog(`🗑️ Удалена заметка: ${note?.text}`);
-            if (tg) tg.HapticFeedback.impactOccurred('heavy');
-            await saveData();
-        }
-
-        // Экранирование HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Обработка нажатия Enter
-        document.getElementById('taskInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addTask();
-        });
-
-        document.getElementById('noteInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addNote();
-        });
-
-        // Инициализация приложения
-        async function initApp() {
-            addDebugLog('🚀 СТАРТ ПРИЛОЖЕНИЯ');
-            addDebugLog(`📱 URL: ${window.location.href}`);
-            addDebugLog(`🌐 User Agent: ${navigator.userAgent.substring(0, 50)}...`);
-            addDebugLog(`📦 Telegram доступен: ${!!window.Telegram}`);
-            
-            if (window.Telegram?.WebApp) {
-                addDebugLog(`✅ Telegram WebApp обнаружен`);
-                addDebugLog(`📊 Platform: ${tg.platform || 'unknown'}`);
-                addDebugLog(`📱 Version: ${tg.version || 'unknown'}`);
-                addDebugLog(`🔑 initData длина: ${tg.initData?.length || 0}`);
+            if (task && confirm('Удалить эту задачу?')) {
+                tasks = tasks.filter(t => t.id !== id);
+                renderTasks();
+                updateStats();
                 
-                if (tg.initDataUnsafe?.user) {
-                    const user = tg.initDataUnsafe.user;
-                    addDebugLog(`👤 Пользователь: ${user.first_name} (ID: ${user.id})`);
-                }
-            } else {
-                addDebugLog(`⚠️ Telegram WebApp НЕ обнаружен - тестовый режим`);
-            }
-            
-            // Загружаем данные
-            await loadData();
-            
-            addDebugLog('✅ Инициализация завершена');
-        }
-
-        // Запускаем инициализацию
-        setTimeout(initApp, 500);
-    </script>
-</body>
-</html>
+                showSuccessMessage('Задача удалена
