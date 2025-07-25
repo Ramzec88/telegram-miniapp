@@ -62,6 +62,12 @@
             border: 1px solid #ffb3b3;
         }
 
+        .connection-status.loading {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
         .tabs {
             display: flex;
             background: var(--tg-theme-secondary-bg-color, #f0f0f0);
@@ -257,11 +263,11 @@
 </head>
 <body>
     <div class="app-header">
-        <h1>🤖 Персональный помощник Артемий</h1>
+        <h1>🤖 Персональный помощник v2</h1>
         <p>Управляйте задачами и заметками легко и удобно</p>
     </div>
 
-    <div class="connection-status" id="connectionStatus">
+    <div class="connection-status loading" id="connectionStatus">
         🔄 Подключение к серверу...
     </div>
 
@@ -347,10 +353,14 @@
 
         // Сохранение данных на сервере
         async function saveData() {
-            if (!tg?.initData || isLoading) return;
+            if (!tg?.initData || isLoading) {
+                console.log('Пропускаем сохранение: нет initData или идет загрузка');
+                return;
+            }
             
             setLoading(true);
             try {
+                console.log('Отправляем данные на сервер...');
                 const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -362,18 +372,18 @@
                 });
                 
                 if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(`Ошибка ${response.status}: ${error}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const result = await response.json();
                 isOnline = true;
                 updateConnectionStatus('online', '✅ Данные сохранены в облаке');
-                console.log('Данные сохранены:', result);
+                console.log('✅ Данные сохранены:', result);
             } catch (error) {
-                console.error('Ошибка сохранения:', error);
+                console.error('❌ Ошибка сохранения:', error);
                 isOnline = false;
-                updateConnectionStatus('offline', '❌ Ошибка сохранения данных');
+                updateConnectionStatus('offline', '❌ Ошибка сохранения: ' + error.message);
                 if (tg) tg.showAlert('Ошибка сохранения: ' + error.message);
             } finally {
                 setLoading(false);
@@ -382,16 +392,25 @@
 
         // Загрузка данных с сервера
         async function loadData() {
-            if (!tg?.initData || isLoading) return;
+            if (isLoading) return;
             
             setLoading(true);
-            updateConnectionStatus('offline', '🔄 Загрузка данных...');
+            updateConnectionStatus('loading', '🔄 Загрузка данных...');
             
             try {
-                const response = await fetch(`/api/load?initData=${encodeURIComponent(tg.initData)}`);
+                console.log('Загружаем данные с сервера...');
+                
+                let url = '/api/load';
+                if (tg?.initData) {
+                    url += `?initData=${encodeURIComponent(tg.initData)}`;
+                } else {
+                    url += '?test=1';
+                }
+                
+                const response = await fetch(url);
                 if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(`Ошибка ${response.status}: ${error}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -403,13 +422,36 @@
                 updateStats();
                 
                 isOnline = true;
-                updateConnectionStatus('online', '✅ Подключено к облаку');
-                console.log('Данные загружены:', data);
+                if (tg?.initData) {
+                    updateConnectionStatus('online', '✅ Подключено к облаку');
+                } else {
+                    updateConnectionStatus('offline', '⚠️ Тестовый режим (демо данные)');
+                }
+                console.log('✅ Данные загружены:', data);
             } catch (error) {
-                console.error('Ошибка загрузки:', error);
+                console.error('❌ Ошибка загрузки:', error);
                 isOnline = false;
-                updateConnectionStatus('offline', '❌ Работа в автономном режиме');
-                // Продолжаем работу с локальными данными
+                updateConnectionStatus('offline', '❌ Ошибка загрузки: ' + error.message);
+                
+                // Показываем локальные примеры при ошибке
+                tasks = [
+                    {
+                        id: generateId(),
+                        text: 'Исправить подключение к серверу',
+                        completed: false,
+                        createdAt: new Date(Date.now() - 3600000).toISOString()
+                    }
+                ];
+                notes = [
+                    {
+                        id: generateId(),
+                        text: 'Проверить настройки API',
+                        createdAt: new Date(Date.now() - 1800000).toISOString()
+                    }
+                ];
+                renderTasks();
+                renderNotes();
+                updateStats();
             } finally {
                 setLoading(false);
             }
@@ -611,50 +653,23 @@
 
         // Инициализация приложения
         async function initApp() {
-            console.log('Инициализация приложения...');
+            console.log('=== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ ===');
+            console.log('URL:', window.location.href);
+            console.log('Telegram WebApp доступен:', !!tg);
             
-            // Проверяем доступность Telegram Web App
             if (tg?.initData) {
-                console.log('Telegram Web App обнаружен');
-                await loadData();
+                console.log('✅ Telegram WebApp обнаружен');
+                console.log('initData длина:', tg.initData.length);
             } else {
-                console.log('Работа без Telegram Web App (тестовый режим)');
-                updateConnectionStatus('offline', '⚠️ Тестовый режим (без Telegram)');
-                
-                // Добавляем примеры для демонстрации
-                tasks = [
-                    {
-                        id: generateId(),
-                        text: 'Изучить Telegram Mini Apps',
-                        completed: false,
-                        createdAt: new Date(Date.now() - 3600000).toISOString()
-                    },
-                    {
-                        id: generateId(),
-                        text: 'Настроить Supabase',
-                        completed: true,
-                        createdAt: new Date(Date.now() - 7200000).toISOString()
-                    }
-                ];
-
-                notes = [
-                    {
-                        id: generateId(),
-                        text: 'Отличная идея для проекта!',
-                        createdAt: new Date(Date.now() - 1800000).toISOString()
-                    }
-                ];
-
-                renderTasks();
-                renderNotes();
-                updateStats();
+                console.log('⚠️ Telegram WebApp НЕ обнаружен - тестовый режим');
             }
+            
+            // Загружаем данные с сервера
+            await loadData();
         }
 
         // Запускаем инициализацию
         setTimeout(initApp, 500);
-        // Инициализация приложения (версия с отладкой) 
-        async function initApp() { console.log('=== ДИАГНОСТИКА TELEGRAM WEBAPP ==='); console.log('URL:', window.location.href); console.log('User Agent:', navigator.userAgent); console.log('window.Telegram существует:', !!window.Telegram); if (window.Telegram) { console.log('window.Telegram.WebApp существует:', !!window.Telegram.WebApp); if (window.Telegram.WebApp) { console.log('WebApp.initData:', window.Telegram.WebApp.initData); console.log('WebApp.initDataUnsafe:', window.Telegram.WebApp.initDataUnsafe); console.log('WebApp.platform:', window.Telegram.WebApp.platform); console.log('WebApp.version:', window.Telegram.WebApp.version); } } console.log('=== КОНЕЦ ДИАГНОСТИКИ ==='); // Проверяем доступность Telegram Web App if (tg?.initData) { console.log('✅ Telegram Web App обнаружен, загружаем данные...'); updateConnectionStatus('offline', '🔄 Загрузка из облака...'); await loadData(); } else { console.log('❌ Telegram Web App НЕ обнаружен'); console.log('Возможные причины:'); console.log('1. Приложение открыто в обычном браузере'); console.log('2. Неправильный URL в настройках Mini App'); console.log('3. Проблема с загрузкой telegram-web-app.js'); updateConnectionStatus('offline', '⚠️ Тестовый режим (без Telegram)'); // Добавляем примеры для демонстрации tasks = [ { id: generateId(), text: 'Протестировать сохранение в Telegram', completed: false, createdAt: new Date(Date.now() - 3600000).toISOString() }, { id: generateId(), text: 'Настроить Telegram Mini App', completed: true, createdAt: new Date(Date.now() - 7200000).toISOString() } ]; notes = [ { id: generateId(), text: 'Проверить работу в настоящем Telegram боте', createdAt: new Date(Date.now() - 1800000).toISOString() } ]; renderTasks(); renderNotes(); updateStats(); } }
     </script>
 </body>
 </html>
